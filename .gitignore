@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+
+# vim temp file
+.*.swp
+
+# vim undo file
+*.un~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IPython
+profile_default/
+ipython_config.py
+
