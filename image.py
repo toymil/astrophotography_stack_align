@@ -191,9 +191,12 @@ class Image:
         float,  # star_neighbour_range_low
         float,  # star_neighbour_range_high
     ]:
-        # TODO: move the description in jupyter notebook to corresponding codes
+        # TODO: move the description in jupyter notebook here around corresponding codes
+
         if (star_neighbour_range_low is None) or (star_neighbour_range_high is None):
             warnings.warn('`star_neighbour_range_low/high` not set, calculated with coeff.')
+            # photos to align should have the same
+            # `star_neighbour_range_low/high` as the reference photo
             star_neighbour_range_low, star_neighbour_range_high = np.array(
                 # use coeff to multiply the std of star separation
                 [star_neighbour_range_low_coeff, star_neighbour_range_high_coeff]
@@ -235,7 +238,7 @@ class Image:
                             )
                         ) * np.sign( np.cross(neighbours[0][0], sv) )
                     )
-            # too few neighbours do not form enough triangles
+            # too few neighbours do not form enough triangles, aka not valid structure
             if (ln := len(neighbours)) < 3:
                 continue
 
@@ -284,17 +287,6 @@ class IIO:  # Inter-Image Operation
         # Can it be somehow auto tuned?
         weight_cliff_coeff: int = 80,
     ) -> float:
-        # # prototype version, too slow
-        # separation: list[float] = []
-        # for triangle_1 in f1:
-        #     for triangle_2 in f2:
-        #         separation.append(np.linalg.norm(triangle_2 - triangle_1))
-        # s = np.array(separation)
-        # normalized_separation = 2 / (1 + np.exp(
-        #     np.power( (weight_cliff_coeff * s), 3 )
-        # ))
-        # return normalized_separation.sum() / (len(f1) + len(f2))
-
         # prepare `f1` and `f2` to be in the 'cartesian product' shape 'S NMx2 A'
         f1e = np.repeat(f1, len(f2), axis=0)
         f2e = np.tile(f2, (len(f1), 1))
