@@ -46,14 +46,17 @@ class Image:
         if compute_wlred:
             image_gray: np.ndarray = cv.cvtColor(self.image, cv.COLOR_BGR2GRAY)
             image_gray_float: np.ndarray = (
-                image_gray.astype(np.float32) / np.iinfo(image_gray.dtype).max
+                # use float64 since the number is small, might encounter the
+                # 'rounding to 0' problem (if used float32, this is exactly
+                # what will happen in the `cv.moments()` part later)
+                image_gray.astype(np.float64) / np.iinfo(image_gray.dtype).max
             )
             self._image_gray_float_wlred = Image.wavelet_dec_red_rec(image_gray_float)
 
             # TODO: tune radius and sigma?
             image_gray_blur: np.ndarray = cv.GaussianBlur(image_gray, (9, 9), 0, 0)
             image_gray_blur_float: np.ndarray = (
-                image_gray_blur.astype(np.float32) / np.iinfo(image_gray_blur.dtype).max
+                image_gray_blur.astype(np.float64) / np.iinfo(image_gray_blur.dtype).max
             )
             self._image_gray_blur_float_wlred = Image.wavelet_dec_red_rec(image_gray_blur_float)
 
@@ -116,16 +119,33 @@ class Image:
             float,  # brightness
         ]] = []
         for c in contours:
+            cb: tuple[  # contour box
+                int,  # x
+                int,  # y
+                int,  # width (x)
+                int,  # height (y)
+            ] = cv.boundingRect(c)
+            cicb = c - cb[:2]  # contour in contour box
             # calculate centroid from clear image
             star_mask: np.ndarray = cv.drawContours(
-                # for brightness weighted moments calculation
+                # image mask for brightness weighted moments calculation
                 # draw filled (value 1) contours on black (value 0) image
-                np.zeros(self._image_gray_float_wlred.shape, self._image_gray_float_wlred.dtype),
-                [c], 0,
+                # note that ndarray dimension takes [y, x]
+                np.zeros(cb[:-3:-1], self._image_gray_float_wlred.dtype),
+                [cicb], 0,
                 1, cv.FILLED,
             )
-            M: dict[str, float] = cv.moments(star_mask * self._image_gray_float_wlred)
-            centroid = np.array([ M['m10'] / M['m00'], M['m01'] / M['m00'] ])
+            M: dict[str, float] = cv.moments(
+                # `dtype` precision used in moments calculation should
+                # be at least `np.float64`, `np.float32` will likely to
+                # encounter 'rounded to 0' problem
+                star_mask
+                * self._image_gray_float_wlred[
+                    cb[1] : cb[1] + cb[3],
+                    cb[0] : cb[0] + cb[2]
+                ]
+            )
+            centroid = cb[:2] + np.array([ M['m10'] / M['m00'], M['m01'] / M['m00'] ])
             # denote brightness from blur image, increase robustness
             brightness = self._image_gray_blur_float_wlred[int(centroid[1]), int(centroid[0])]
 
