@@ -564,9 +564,12 @@ class Stack:
         if show_progress:
             print()
 
-    def write_back_to_files(self) -> None:
+    def write_aligned_back_to_files(self) -> None:
         for image_object in self.image_object_tuple:
+            image_object.load()
+            image_object.transform()
             cv.imwrite(image_object.path, image_object.image)
+            image_object.release()
 
     @enum.unique
     class TYPE(enum.Enum):
