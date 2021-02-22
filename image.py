@@ -100,8 +100,22 @@ class Image:
         # threshold to binary for contour detection
         image_gray_blur_float_wlred_binary: np.ndarray = cv.threshold(
             (t := self._image_gray_blur_float_wlred),
-            # TODO: auto tune this `0.4` threshold parameter
-            t.min() + 0.4 * (t.max() - t.min()),
+            # Dim white blob on black background, `mean()` is no different from
+            # black (black is not necessarily 0), and `std()` is super small.
+            # TODO: How to threshold relatively outstandingly bright stars?
+            # Assume stars are just below overexposed in the original image,
+            # then its value will be at most 1 in the float image, related to
+            # the gaussian blur parameters and star size in the blur float
+            # image.
+            # We can estimate a threshold value from the general star size (of
+            # the not blured image) and gaussian blur parameters.  This
+            # threshold value should grow with the general star size, but will
+            # have an upper limit, since given a certain gaussian blur
+            # parameters the blured value of star 'edges' does not grow over a
+            # certain star size.
+            #
+            # I will just take a guess for now :(
+            t.mean() + 0.135,
             255,
             cv.THRESH_BINARY,
         )[1].astype(np.uint8)
@@ -151,14 +165,24 @@ class Image:
 
             stars.append( (centroid, brightness) )
 
-        # filter and sort by brightness
+        # sort and filter by brightness
         stars.sort(key=lambda e: e[1], reverse=True)
-        # TODO: auto tun `brightness_cutoff`
+        # All stars in this list is already 'well defined' if the thresholding
+        # process is robust.  But to save computing time in structures forming
+        # and inter image structure matching, we only take the brightest among
+        # them.
         brightness_cutoff = np.array(tuple(e[1] for e in stars)).mean()
+        # This cutoff value is somewhat arbitrary, since the brightness of stars
+        # does not form a good distribution.  Anyway this is just a temporary
+        # solution, see the 'to do' below.
         for i in range(len(stars)):
             if stars[i][1] < brightness_cutoff:
                 stars = stars[:i]
                 break
+        # TODO: sort, but do not filter stars.  To save computing time, form
+        # structures in large scale for the brightest stars like usual (lot of
+        # triangle features), but only form structures with the nearest N
+        # neighbours for 'dim' stars (small number of triangle features).
 
         self.stars = tuple(stars)
 
