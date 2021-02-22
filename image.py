@@ -19,8 +19,6 @@ class Image:
     def __init__(
         self,
         image_file_path: str,
-        star_neighbour_range_low: float = None,
-        star_neighbour_range_high: float = None,
     ) -> None:
         self.path: str = image_file_path
 
@@ -32,12 +30,13 @@ class Image:
             np.ndarray,  # S2A[x, y]
             float,  # brightness
         ], ...] = None
+
+        self.star_structure_neighbour_range_low: float = None
+        self.star_structure_neighbour_range_high: float = None
         self.structures: tuple[tuple[
             np.ndarray,  # S2A[x, y]; structure source star centroid
             np.ndarray,  # SNx2A[ [angle, ratio] ]; feature array of triangles
         ], ...] = None
-        self.star_neighbour_range_low: float = star_neighbour_range_low
-        self.star_neighbour_range_high: float = star_neighbour_range_high
 
         self.trans_matrix_to_align_with_another_image: np.ndarray = None  # S3x3A
 
@@ -65,17 +64,16 @@ class Image:
         self._image_gray_float_wlred = None
         self._image_gray_blur_float_wlred = None
 
+    def set_star_structure_neighbour_range(self, low: float, high: float) -> None:
+        self.star_structure_neighbour_range_low = low
+        self.star_structure_neighbour_range_high = high
+
+    def set_transformation_matrix(self, transformation_matrix: np.ndarray) -> None:
+        self.trans_matrix_to_align_with_another_image = transformation_matrix
+
     def compute(self) -> None:
         self.detect_stars()
-        (
-            self.structures,
-            self.star_neighbour_range_low,
-            self.star_neighbour_range_high,
-        ) = Image.form_structures(
-            self.stars,
-            self.star_neighbour_range_low,
-            self.star_neighbour_range_high,
-        )
+        self.form_structures()
 
     @staticmethod
     def wavelet_dec_red_rec(
@@ -196,37 +194,33 @@ class Image:
                 i -= (i // len(l)) * len(l)
         return l[i]
 
-    @staticmethod
     def form_structures(
-        stars: tuple[tuple[
-            np.ndarray,  # S2A[x, y]
-            float,  # brightness
-        ], ...],
-        star_neighbour_range_low: float = None,
-        star_neighbour_range_high: float = None,
-        # the following 2 coeffs will be used to calculate the above 2 if they are `None`
-        star_neighbour_range_low_coeff: float = 0.1,
-        star_neighbour_range_high_coeff: float = 1.0,
-    ) -> tuple[
-        tuple[tuple[
-            np.ndarray,  # S2A[x, y]; structure source star centroid
-            np.ndarray,  # SNx2A[ [angle, ratio] ]; feature array of triangles
-        ], ...],
-        float,  # star_neighbour_range_low
-        float,  # star_neighbour_range_high
-    ]:
+        self,
+        # these 2 coeffs will be used to calculate range_low/high if they are not set
+        star_structure_neighbour_range_low_coeff: float = 0.1,
+        star_structure_neighbour_range_high_coeff: float = 1.0,
+    ) -> None:
         # TODO: move the description in jupyter notebook here around corresponding codes
 
-        if (star_neighbour_range_low is None) or (star_neighbour_range_high is None):
-            warnings.warn('`star_neighbour_range_low/high` not set, calculated with coeff.')
-            # photos to align should have the same `star_neighbour_range_low/high`
-            # as the reference photo
-            star_neighbour_range_low, star_neighbour_range_high = np.array(
+        if (
+            (self.star_structure_neighbour_range_low is None)
+            or (self.star_structure_neighbour_range_high is None)
+        ):
+            warnings.warn('Star structure neighbour range low/high not set, calculate with coeff.')
+            # images to align should have the same `star_structure_neighbour_range_low/high`
+            # as the reference image
+            (
+                self.star_structure_neighbour_range_low,
+                self.star_structure_neighbour_range_high
+            ) = np.array(
                 # use coeff to multiply the std of star separation
-                [star_neighbour_range_low_coeff, star_neighbour_range_high_coeff]
+                [
+                    star_structure_neighbour_range_low_coeff,
+                    star_structure_neighbour_range_high_coeff
+                ]
             ) * np.array(
                 # array of distances from the brightest star to all other stars
-                tuple( np.linalg.norm(s[0] - stars[0][0]) for s in stars[1:] )
+                tuple( np.linalg.norm(s[0] - self.stars[0][0]) for s in self.stars[1:] )
             ).std()
 
         structures: list[tuple[
@@ -234,7 +228,7 @@ class Image:
             np.ndarray,  # SNx2A[ [angle, ratio] ]; feature array of triangles
         ]] = []
 
-        for s1 in stars:
+        for s1 in self.stars:
             neighbours: list[
                 tuple[  # this will actually be list because it will be constructed part by part
                     np.ndarray,  # S2A(separation vector)
@@ -243,11 +237,11 @@ class Image:
                 ]
             ] = []
 
-            for s2 in stars:
+            for s2 in self.stars:
                 if (
-                    star_neighbour_range_low
+                    self.star_structure_neighbour_range_low
                     < np.linalg.norm( (sv := (s2[0] - s1[0])) )
-                    < star_neighbour_range_high
+                    < self.star_structure_neighbour_range_high
                 ):
                     # populate separation vector, magnitude
                     neighbours.append([sv, (sr := np.linalg.norm(sv))])
@@ -285,10 +279,7 @@ class Image:
 
             structures.append( (s1[0], np.array(feature)) )
 
-        return tuple(structures), star_neighbour_range_low, star_neighbour_range_high
-
-    def set_transformation_matrix(self, transformation_matrix: np.ndarray) -> None:
-        self.trans_matrix_to_align_with_another_image = transformation_matrix
+        self.structures = tuple(structures)
 
     def transform(self, transformation_matrix: np.ndarray = None) -> None:
         if transformation_matrix is not None:
@@ -506,3 +497,90 @@ class IIO:  # Inter-Image Operation
         # very close peaks, and they are not symmetric around the center.  Where
         # does it come from??
         return fmij.mean(axis=0).reshape(3, 3)
+
+
+class Stack:
+    def __init__(self, image_file_path_list: list[str]) -> None:
+        ifpl = image_file_path_list.copy()
+        ifpl.sort()
+        image_object_list: list[Image] = []
+        for p in ifpl:
+            image_object_list.append(Image(p))
+        self.image_object_tuple: tuple[Image, ...] = tuple(image_object_list)
+
+        self.reference_image_object: Image = None
+        self.input_image_object_list: list[Image] = None
+        self.set_reference_image(len(self.image_object_tuple) // 2)
+
+    def set_reference_image(self, index: int) -> None:
+        self.reference_image_object = self.image_object_tuple[index]
+        input_image_object_list = list(self.image_object_tuple)
+        input_image_object_list.pop(index)
+        self.input_image_object_list = input_image_object_list
+
+    @staticmethod
+    def _show_progress(progress: int, total: int) -> None:
+        percent = progress / total
+        bar_length = 50
+        left_bar = math.floor(bar_length * percent)
+        print(
+            'PROGRESS: {:_>{}} / {}  [{}{}{}] {: >5}%'.format(
+                progress, len(str(total)),
+                total,
+                '=' * left_bar,
+                '>' if left_bar < bar_length else '',
+                ' ' * (bar_length - left_bar - 1),
+                int(percent * 1000) / 10,
+            ),
+            end='\r',
+        )
+
+    def align(self, show_progress: bool = True) -> None:
+        if show_progress:
+            Stack._show_progress(0, len(self.input_image_object_list))
+        self.reference_image_object.load(compute_wlred=True)
+        self.reference_image_object.compute()
+        self.reference_image_object.release()
+        for i in range( (total := len(self.input_image_object_list)) ):
+            input_image_object = self.input_image_object_list[i]
+            input_image_object.set_star_structure_neighbour_range(
+                self.reference_image_object.star_structure_neighbour_range_low,
+                self.reference_image_object.star_structure_neighbour_range_high
+            )
+            input_image_object.load(compute_wlred=True)
+            input_image_object.compute()
+            input_image_object.release()
+            input_image_object.set_transformation_matrix(
+                IIO.calculate_transformation_matrix(
+                    IIO.match_star_pairs(
+                        self.reference_image_object.structures,
+                        input_image_object.structures
+                    )
+                )
+            )
+            if show_progress:
+                Stack._show_progress(i + 1, total)
+        if show_progress:
+            print()
+
+    def mean(self) -> np.ndarray:
+        image_data_list: list[np.ndarray] = []
+        for input_image_object in self.input_image_object_list:
+            input_image_object.load()
+            input_image_object.transform()
+            image_data_list.append(input_image_object.image)
+            input_image_object.release()
+        self.reference_image_object.load()
+        image_data_list.append(self.reference_image_object.image)
+        input_dtype = self.reference_image_object.image.dtype
+        self.reference_image_object.release()
+        return np.array(image_data_list).mean(axis=0).astype(input_dtype)
+
+    def min_unaligned(self) -> np.ndarray:
+        # TODO: what is that ripple pattern?
+        image_data_list: list[np.ndarray] = []
+        for image_object in self.image_object_tuple:
+            image_object.load()
+            image_data_list.append(image_object.image)
+            image_object.release()
+        return np.array(image_data_list).min(axis=0)
