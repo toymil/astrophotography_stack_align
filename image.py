@@ -573,7 +573,7 @@ class Stack:
         MEAN = enum.auto()
         MIN = enum.auto()
 
-    def statistics(self, statistics_type: Stack.TYPE, aligned: bool = True) -> np.ndarray:
+    def statistics(self, statistics_type: Stack.TYPE, *, aligned: bool = True) -> np.ndarray:
         if aligned:
             domain = self.input_image_object_list
         else:
@@ -597,5 +597,6 @@ class Stack:
         if statistics_type is Stack.TYPE.MEAN:
             stat = np.array(image_data_list).mean(axis=0).astype(input_dtype)
         elif statistics_type is Stack.TYPE.MIN:
+            # TODO: what is that ripple pattern?
             stat = np.array(image_data_list).min(axis=0)
         return stat
