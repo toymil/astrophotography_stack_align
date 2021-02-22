@@ -563,7 +563,11 @@ class Stack:
         if show_progress:
             print()
 
-    def mean(self) -> np.ndarray:
+    def write_back_to_files(self) -> None:
+        for image_object in self.image_object_tuple:
+            cv.imwrite(image_object.path, image_object.image)
+
+    def mean_aligned(self) -> np.ndarray:
         image_data_list: list[np.ndarray] = []
         for input_image_object in self.input_image_object_list:
             input_image_object.load()
@@ -576,6 +580,8 @@ class Stack:
         self.reference_image_object.release()
         return np.array(image_data_list).mean(axis=0).astype(input_dtype)
 
+    # TODO: merge the `unaligned` functions, make multiple output with one run
+
     def min_unaligned(self) -> np.ndarray:
         # TODO: what is that ripple pattern?
         image_data_list: list[np.ndarray] = []
@@ -584,3 +590,12 @@ class Stack:
             image_data_list.append(image_object.image)
             image_object.release()
         return np.array(image_data_list).min(axis=0)
+
+    def mean_unaligned(self) -> np.ndarray:
+        image_data_list: list[np.ndarray] = []
+        for image_object in self.image_object_tuple:
+            image_object.load()
+            input_dtype = image_object.image.dtype  # anyway just toss it here
+            image_data_list.append(image_object.image)
+            image_object.release()
+        return np.array(image_data_list).mean(axis=0).astype(input_dtype)
