@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import enum
 import math
 import warnings
 from collections.abc import Sequence
@@ -567,35 +568,34 @@ class Stack:
         for image_object in self.image_object_tuple:
             cv.imwrite(image_object.path, image_object.image)
 
-    def mean_aligned(self) -> np.ndarray:
+    @enum.unique
+    class TYPE(enum.Enum):
+        MEAN = enum.auto()
+        MIN = enum.auto()
+
+    def statistics(self, statistics_type: Stack.TYPE, aligned: bool = True) -> np.ndarray:
+        if aligned:
+            domain = self.input_image_object_list
+        else:
+            domain = self.image_object_tuple
+
         image_data_list: list[np.ndarray] = []
-        for input_image_object in self.input_image_object_list:
-            input_image_object.load()
-            input_image_object.transform()
-            image_data_list.append(input_image_object.image)
-            input_image_object.release()
+        for image_object in domain:
+            image_object.load()
+            if aligned:
+                image_object.transform()
+            image_data_list.append(image_object.image)
+            image_object.release()
+
         self.reference_image_object.load()
-        image_data_list.append(self.reference_image_object.image)
         input_dtype = self.reference_image_object.image.dtype
+        if aligned:
+            image_data_list.append(self.reference_image_object.image)
         self.reference_image_object.release()
-        return np.array(image_data_list).mean(axis=0).astype(input_dtype)
 
-    # TODO: merge the `unaligned` functions, make multiple output with one run
-
-    def min_unaligned(self) -> np.ndarray:
-        # TODO: what is that ripple pattern?
-        image_data_list: list[np.ndarray] = []
-        for image_object in self.image_object_tuple:
-            image_object.load()
-            image_data_list.append(image_object.image)
-            image_object.release()
-        return np.array(image_data_list).min(axis=0)
-
-    def mean_unaligned(self) -> np.ndarray:
-        image_data_list: list[np.ndarray] = []
-        for image_object in self.image_object_tuple:
-            image_object.load()
-            input_dtype = image_object.image.dtype  # anyway just toss it here
-            image_data_list.append(image_object.image)
-            image_object.release()
-        return np.array(image_data_list).mean(axis=0).astype(input_dtype)
+        stat: np.ndarray = None
+        if statistics_type is Stack.TYPE.MEAN:
+            stat = np.array(image_data_list).mean(axis=0).astype(input_dtype)
+        elif statistics_type is Stack.TYPE.MIN:
+            stat = np.array(image_data_list).min(axis=0)
+        return stat
