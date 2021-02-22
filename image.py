@@ -312,18 +312,20 @@ class IIO:  # Inter-Image Operation
         #     1 + np.exp(np.power(weight_cliff_coeff * separation, 3))
         # )
         # # Will the native numpy method be faster?
-        normalized_separation = np.divide(
-            2,
-            np.add(
-                1,
-                np.exp(
-                    np.power(
-                        np.multiply(weight_cliff_coeff, separation),
-                        3
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            normalized_separation = np.divide(
+                2,
+                np.add(
+                    1,
+                    np.exp(
+                        np.power(
+                            np.multiply(weight_cliff_coeff, separation),
+                            3
+                        )
                     )
                 )
             )
-        )
 
         return normalized_separation.sum() / (len(f1) + len(f2))
 
@@ -540,7 +542,9 @@ class Stack:
         if show_progress:
             Stack._show_progress(0, len(self.input_image_object_list))
         self.reference_image_object.load(compute_wlred=True)
-        self.reference_image_object.compute()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.reference_image_object.compute()
         self.reference_image_object.release()
         for i in range( (total := len(self.input_image_object_list)) ):
             input_image_object = self.input_image_object_list[i]
