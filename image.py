@@ -219,8 +219,8 @@ class Image:
 
         if (star_neighbour_range_low is None) or (star_neighbour_range_high is None):
             warnings.warn('`star_neighbour_range_low/high` not set, calculated with coeff.')
-            # photos to align should have the same
-            # `star_neighbour_range_low/high` as the reference photo
+            # photos to align should have the same `star_neighbour_range_low/high`
+            # as the reference photo
             star_neighbour_range_low, star_neighbour_range_high = np.array(
                 # use coeff to multiply the std of star separation
                 [star_neighbour_range_low_coeff, star_neighbour_range_high_coeff]
@@ -409,14 +409,14 @@ class IIO:  # Inter-Image Operation
             #
             # 4 set of pairs and take `m33 = 1`, then we have `Ax=b` as:
             #
-            # [ [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],    [ m31,    [ 0, 
-            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m32,      0, 
-            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],      m33,      0, 
-            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m11,      0, 
-            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],  X   m12,  =   0, 
-            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m13,      0, 
-            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],      m21,      0, 
-            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m22,      0, 
+            # [ [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],    [ m31,    [ 0,
+            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m32,      0,
+            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],      m33,      0,
+            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m11,      0,
+            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],  X   m12,  =   0,
+            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m13,      0,
+            #   [xr*xv, xr*yv, xr, -xv, -yv, -1,   0,   0,  0],      m21,      0,
+            #   [yr*xv, yr*yv, yr,   0,   0,  0, -xv, -yv, -1],      m22,      0,
             #   [    0,     0,  1,   0,   0,  0,   0,   0,  0] ]     m23 ]     1 ]
             #
             # (actually recommend to put the `1` for `m33 = 1` on the last column,
