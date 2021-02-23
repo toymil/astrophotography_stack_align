@@ -584,6 +584,8 @@ class Stack:
     @enum.unique
     class TYPE(enum.Enum):
         MEAN = enum.auto()
+        MAX = enum.auto()
+        MEDIAN = enum.auto()
         MIN = enum.auto()
 
     def statistics(self, statistics_type: Stack.TYPE, *, aligned: bool = True) -> np.ndarray:
@@ -606,10 +608,15 @@ class Stack:
             image_data_list.append(self.reference_image_object.image)
         self.reference_image_object.release()
 
+        image_data_list = np.array(image_data_list)
         stat: np.ndarray = None
         if statistics_type is Stack.TYPE.MEAN:
-            stat = np.array(image_data_list).mean(axis=0).astype(input_dtype)
+            stat = np.mean(image_data_list, axis=0).astype(input_dtype)
+        elif statistics_type is Stack.TYPE.MAX:
+            stat = np.amax(image_data_list, axis=0)
+        elif statistics_type is Stack.TYPE.MEDIAN:
+            stat = np.median(image_data_list, axis=0).astype(input_dtype)
         elif statistics_type is Stack.TYPE.MIN:
             # TODO: what is that ripple pattern?
-            stat = np.array(image_data_list).min(axis=0)
+            stat = np.amin(image_data_list, axis=0)
         return stat
