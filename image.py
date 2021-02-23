@@ -569,11 +569,14 @@ class Stack:
             print()
 
     def write_aligned_back_to_files(self) -> None:
-        for image_object in self.image_object_tuple:
+        for image_object in self.input_image_object_list:
             image_object.load()
             image_object.transform()
             cv.imwrite(image_object.path, image_object.image)
             image_object.release()
+        self.reference_image_object.load()
+        cv.imwrite(self.reference_image_object.path, self.reference_image_object.image)
+        self.reference_image_object.release()
 
     @enum.unique
     class TYPE(enum.Enum):
