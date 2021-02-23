@@ -569,6 +569,9 @@ class Stack:
             print()
 
     def write_aligned_back_to_files(self) -> None:
+        # files written with `cv.imwrite()` do not have color profiles
+        # use `exiftool -icc_profile -b -w ${image_fie}` to extract icc profile
+        # use `exiftool '-ICC_Profile<=${icc_fie}' ${image_fie}` to embed icc profile
         for image_object in self.input_image_object_list:
             image_object.load()
             image_object.transform()
