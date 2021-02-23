@@ -115,4 +115,5 @@ def main():
 
 if __name__ == '__main__':
     # main()
+    print('READ this file first!  It is actually really short.')
     input('Script finished, press <Enter> to exit.')
