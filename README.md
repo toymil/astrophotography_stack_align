@@ -1,5 +1,7 @@
 # Astrophotography Stack Align
 
+_Technically nothing new._
+
 ## Brief Description
 
 Align sequence of star field / astro images taken with a stationary camera (stationary relative to all those stars light years away).
@@ -12,6 +14,13 @@ See full size images under `.github/image/` folder.
 **Read the content of `main.py` to see how to use this program (really not much code, with comments).**  If you are not familiar with writing codes, it is recommended to test your codes in interactive python shells like IPython or Jupyter Notebook.
 
 Check out those jupyter notebooks under folder `math/` to see how it works.  All the processing logic is in file `image.py`, cross reference it with jupyter notebooks.
+
+## TO-DOs
+
+- [ ] find test samples in multiple focal length (especially wide angle)
+- [ ] super resolution
+- [ ] bypass demosaic
+- [ ] multi thread
 
 ## Dependencies
 
