@@ -7,7 +7,7 @@ import enum
 import math
 import warnings
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import TypeVar, Union
 
 import cv2 as cv
 import numpy as np
@@ -588,7 +588,12 @@ class Stack:
         MEDIAN = enum.auto()
         MIN = enum.auto()
 
-    def statistics(self, statistics_type: Stack.TYPE, *, aligned: bool = True) -> np.ndarray:
+    def statistics(
+        self,
+        statistics_types: Union[ Stack.TYPE, tuple[Stack.TYPE, ...] ],
+        *,
+        aligned: bool = True,
+    ) -> Union[np.ndarray, tuple[np.ndarray, ...]]:
         if aligned:
             domain = self.input_image_object_list
         else:
@@ -609,14 +614,23 @@ class Stack:
         self.reference_image_object.release()
 
         image_data_list = np.array(image_data_list)
-        stat: np.ndarray = None
-        if statistics_type is Stack.TYPE.MEAN:
-            stat = np.mean(image_data_list, axis=0).astype(input_dtype)
-        elif statistics_type is Stack.TYPE.MAX:
-            stat = np.amax(image_data_list, axis=0)
-        elif statistics_type is Stack.TYPE.MEDIAN:
-            stat = np.median(image_data_list, axis=0).astype(input_dtype)
-        elif statistics_type is Stack.TYPE.MIN:
-            # TODO: what is that ripple pattern?
-            stat = np.amin(image_data_list, axis=0)
-        return stat
+
+        stats: list[np.ndarray] = []
+        single_input: bool = False
+        if type(statistics_types) is Stack.TYPE:
+            single_input = True
+            statistics_types = (statistics_types, )
+        for stat_type in statistics_types:
+            if stat_type is Stack.TYPE.MEAN:
+                stats.append( np.mean(image_data_list, axis=0).astype(input_dtype) )
+            elif stat_type is Stack.TYPE.MAX:
+                stats.append( np.amax(image_data_list, axis=0) )
+            elif stat_type is Stack.TYPE.MEDIAN:
+                stats.append( np.median(image_data_list, axis=0).astype(input_dtype) )
+            elif stat_type is Stack.TYPE.MIN:
+                # TODO: what is that ripple pattern?
+                stats.append( np.amin(image_data_list, axis=0) )
+
+        if single_input:
+            return stats[0]
+        return tuple(stats)
