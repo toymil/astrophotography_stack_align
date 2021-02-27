@@ -11,13 +11,15 @@ See full size images under `.github/image/` folder.
 
 ## Usage
 
-**Read the content of `main.py` to see how to use this program (really not much code, with comments).**  If you are not familiar with writing codes, it is recommended to test your codes in interactive python shells like IPython or Jupyter Notebook.
+**Read the content of `main.py` to see how to use this program (really not much code, with comments).**  If you want to test different settings or is not familiar with writing codes, it is recommended to test your codes in interactive python shells like IPython or Jupyter Notebook.
 
 Check out those jupyter notebooks under folder `math/` to see how it works.  All the processing logic is in file `image.py`, cross reference it with jupyter notebooks.
 
 ## TO-DOs
 
 - [ ] find test samples in multiple focal length (especially wide angle)
+- [ ] increase bit precision in the pipeline
+  - [ ] do stack mean on subtracted, raised exposure images, to increase bit resolution (aka tone stretching before not after stack)
 - [ ] super resolution
 - [ ] bypass demosaic
 - [ ] multi thread
