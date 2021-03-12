@@ -20,8 +20,10 @@ Check out those jupyter notebooks under folder `math/` to see how it works.  All
 - [ ] find test samples in multiple focal length (especially wide angle)
 - [ ] increase bit precision in the pipeline
   - [ ] do stack mean on subtracted, raised exposure images, to increase bit resolution (aka tone stretching before not after stack)
+- [ ] various `TODO`s in the code
 - [ ] super resolution
 - [ ] bypass demosaic
+- [ ] run some stages on GPU?
 - [ ] multi thread
 
 ## Dependencies
