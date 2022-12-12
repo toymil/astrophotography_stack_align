@@ -45,19 +45,29 @@ class Image:
         self.image = cv.imread(self.path, cv.IMREAD_UNCHANGED)
         if compute_wlred:
             image_gray: np.ndarray = cv.cvtColor(self.image, cv.COLOR_BGR2GRAY)
-            image_gray_float: np.ndarray = (
-                # use float64 since the number is small, might encounter the
-                # 'rounding to 0' problem (if used float32, this is exactly
-                # what will happen in the `cv.moments()` part later)
-                image_gray.astype(np.float64) / np.iinfo(image_gray.dtype).max
-            )
+            # use float64 since the number is small, might encounter the
+            # 'rounding to 0' problem (if used float32, this is exactly
+            # what will happen in the `cv.moments()` part later)
+            if image_gray.dtype == np.float64:
+                image_gray_float = image_gray
+            elif image_gray.dtype in (np.float16, np.float32):
+                image_gray_float = image_gray.astype(np.float64)
+            else:
+                image_gray_float: np.ndarray = (
+                    image_gray.astype(np.float64) / np.iinfo(image_gray.dtype).max
+                )
             self._image_gray_float_wlred = Image.wavelet_dec_red_rec(image_gray_float)
 
             # TODO: tune radius and sigma?
             image_gray_blur: np.ndarray = cv.GaussianBlur(image_gray, (9, 9), 0, 0)
-            image_gray_blur_float: np.ndarray = (
-                image_gray_blur.astype(np.float64) / np.iinfo(image_gray_blur.dtype).max
-            )
+            if image_gray_blur.dtype == np.float64:
+                image_gray_blur_float = image_gray_blur
+            elif image_gray_blur.dtype in (np.float16, np.float32):
+                image_gray_blur_float = image_gray_blur.astype(np.float64)
+            else:
+                image_gray_blur_float: np.ndarray = (
+                    image_gray_blur.astype(np.float64) / np.iinfo(image_gray_blur.dtype).max
+                )
             self._image_gray_blur_float_wlred = Image.wavelet_dec_red_rec(image_gray_blur_float)
 
     def release(self) -> None:
