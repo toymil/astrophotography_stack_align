@@ -301,7 +301,7 @@ class Image:
         self.image = cv.warpPerspective(
             self.image,
             self.trans_matrix_to_align_with_another_image,
-            self.image.shape[:2],
+            self.image.shape[:2][::-1],
             flags=cv.INTER_LANCZOS4,
         )
 
