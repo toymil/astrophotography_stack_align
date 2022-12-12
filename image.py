@@ -82,8 +82,10 @@ class Image:
     def set_transformation_matrix(self, transformation_matrix: np.ndarray) -> None:
         self.trans_matrix_to_align_with_another_image = transformation_matrix
 
-    def compute(self) -> None:
-        self.detect_stars()
+    def compute(self, filter_: bool) -> None:
+        self.detect_stars(filter_by_brightness=filter_)
+        if not filter_:
+            self.set_star_structure_neighbour_range(0, np.linalg.norm(self.image.shape[:2]))
         self.form_structures()
 
     @staticmethod
@@ -105,7 +107,7 @@ class Image:
         # reconstruction
         return pywt.waverec2(coeffs, 'db8')
 
-    def detect_stars(self) -> None:
+    def detect_stars(self, filter_by_brightness: bool) -> None:
         # threshold to binary for contour detection
         image_gray_blur_float_wlred_binary: np.ndarray = cv.threshold(
             (t := self._image_gray_blur_float_wlred),
@@ -180,14 +182,15 @@ class Image:
         # process is robust.  But to save computing time in structures forming
         # and inter image structure matching, we only take the brightest among
         # them.
-        brightness_cutoff = np.array(tuple(e[1] for e in stars)).mean()
-        # This cutoff value is somewhat arbitrary, since the brightness of stars
-        # does not form a good distribution.  Anyway this is just a temporary
-        # solution, see the 'to do' below.
-        for i in range(len(stars)):
-            if stars[i][1] < brightness_cutoff:
-                stars = stars[:i]
-                break
+        if filter_by_brightness:
+            brightness_cutoff = np.array(tuple(e[1] for e in stars)).mean()
+            # This cutoff value is somewhat arbitrary, since the brightness of stars
+            # does not form a good distribution.  Anyway this is just a temporary
+            # solution, see the 'to do' below.
+            for i in range(len(stars)):
+                if stars[i][1] < brightness_cutoff:
+                    stars = stars[:i]
+                    break
         # TODO: sort, but do not filter stars.  To save computing time, form
         # structures in large scale for the brightest stars like usual (lot of
         # triangle features), but only form structures with the nearest N
@@ -373,6 +376,7 @@ class IIO:  # Inter-Image Operation
     @staticmethod
     def calculate_transformation_matrix(
         img1_img2_star_pairs: tuple[tuple[np.ndarray, np.ndarray], ...],
+        filter_: bool,
         sample_round: int = None,  # how many sample rounds, `None` for auto
     ) -> np.ndarray:  # S3x3A(m_{ij}) img2 to img1 transformation matrix
         rng = np.random.default_rng()  # random number generator
@@ -483,7 +487,10 @@ class IIO:  # Inter-Image Operation
         # we need to filter it before calculate its mean.
         # `vc` for 'validity_criterion'
         vc_max_std = 1
-        vc_min_used_round = sample_round // 3
+        if filter_:
+            vc_min_used_round = sample_round // 3
+        else:
+            vc_min_used_round = 0
 
         fmij = mij.view()
         while vc_max_std < fmij.std(axis=0).max():
@@ -548,13 +555,13 @@ class Stack:
             end='\r',
         )
 
-    def align(self, show_progress: bool = True) -> None:
+    def align(self, show_progress: bool = True, filter_: bool = True) -> None:
         if show_progress:
             Stack._show_progress(0, len(self.input_image_object_list))
         self.reference_image_object.load(compute_wlred=True)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            self.reference_image_object.compute()
+            self.reference_image_object.compute(filter_=filter_)
         self.reference_image_object.release()
         for i in range( (total := len(self.input_image_object_list)) ):
             input_image_object = self.input_image_object_list[i]
@@ -563,14 +570,15 @@ class Stack:
                 self.reference_image_object.star_structure_neighbour_range_high
             )
             input_image_object.load(compute_wlred=True)
-            input_image_object.compute()
+            input_image_object.compute(filter_=filter_)
             input_image_object.release()
             input_image_object.set_transformation_matrix(
                 IIO.calculate_transformation_matrix(
                     IIO.match_star_pairs(
                         self.reference_image_object.structures,
                         input_image_object.structures
-                    )
+                    ),
+                    filter_=filter_
                 )
             )
             if show_progress:
