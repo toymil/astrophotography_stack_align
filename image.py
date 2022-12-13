@@ -305,6 +305,20 @@ class Image:
             flags=cv.INTER_LANCZOS4,
         )
 
+    @staticmethod
+    def stretch(image: np.ndarray, target_dtype: type = np.uint16, *, extra_factor: float = 1) -> np.ndarray:
+        return (image * (np.iinfo(target_dtype).max / image.max()) * extra_factor).clip(
+            np.iinfo(target_dtype).min,
+            np.iinfo(target_dtype).max,
+        ).astype(target_dtype)
+
+    @staticmethod
+    def clip(image: np.ndarray, target_dtype: type = np.uint16) -> np.ndarray:
+        return image.clip(
+            np.iinfo(target_dtype).min,
+            np.iinfo(target_dtype).max,
+        ).astype(target_dtype)
+
 
 class IIO:  # Inter-Image Operation
     @staticmethod
