@@ -7,7 +7,7 @@ import enum
 import math
 import warnings
 from collections.abc import Sequence
-from typing import TypeVar, Union
+from typing import TypeVar
 
 import cv2 as cv
 import numpy as np
@@ -622,11 +622,11 @@ class Stack:
 
     def statistics(
         self,
-        statistics_types: Union[ Stack.TYPE, tuple[Stack.TYPE, ...] ],
+        statistics_types: Stack.TYPE | tuple[Stack.TYPE, ...],
         *,
         aligned: bool = True,
         return_same_dtype: bool = True,
-    ) -> Union[np.ndarray, tuple[np.ndarray, ...]]:
+    ) -> np.ndarray | tuple[np.ndarray, ...]:
         if aligned:
             domain = self.input_image_object_list
         else:
