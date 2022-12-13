@@ -646,7 +646,8 @@ class Stack:
             elif stat_type is Stack.TYPE.MEDIAN:
                 stats.append( np.median(image_data_list, axis=0).astype(input_dtype) )
             elif stat_type is Stack.TYPE.MIN:
-                # TODO: what is that ripple pattern?
+                # If you see ripple pattern artifacts, disable lens distortion
+                # correction in the input image
                 stats.append( np.amin(image_data_list, axis=0) )
 
         if single_input:
