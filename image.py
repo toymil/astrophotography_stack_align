@@ -547,6 +547,7 @@ class Stack:
 
     def set_reference_image(self, index: int) -> None:
         self.reference_image_object = self.image_object_tuple[index]
+        self.reference_image_object.set_transformation_matrix(np.identity(3, np.float64))
         input_image_object_list = list(self.image_object_tuple)
         input_image_object_list.pop(index)
         self.input_image_object_list = input_image_object_list
@@ -626,13 +627,11 @@ class Stack:
         aligned: bool = True,
         return_same_dtype: bool = True,
     ) -> np.ndarray | tuple[np.ndarray, ...]:
-        if aligned:
-            domain = self.input_image_object_list
-        else:
-            domain = self.image_object_tuple
+        self.reference_image_object.load()
+        input_dtype = self.reference_image_object.image.dtype
 
-        image_data_list: list[np.ndarray] = []
-        for image_object in domain:
+        image_data_list: list[np.ndarray] = list()
+        for image_object in self.image_object_tuple:
             image_object.load()
             image_object.image = image_object.image.astype(np.float64, casting='safe')
             if aligned:
@@ -640,15 +639,7 @@ class Stack:
             image_data_list.append(image_object.image)
             image_object.release()
 
-        self.reference_image_object.load()
-        input_dtype = self.reference_image_object.image.dtype
-        if aligned:
-            image_data_list.append(
-                self.reference_image_object.image.astype(np.float64, casting='safe')
-            )
-        self.reference_image_object.release()
-
-        image_data_list: np.ndarray = np.array(image_data_list)
+        image_data_ndarray: np.ndarray = np.array(image_data_list)
 
         stats: list[np.ndarray] = []
         single_input: bool = False
@@ -657,15 +648,15 @@ class Stack:
             statistics_types = (statistics_types, )
         for stat_type in statistics_types:
             if stat_type is Stack.TYPE.MEAN:
-                stats.append( np.mean(image_data_list, axis=0) )
+                stats.append( np.mean(image_data_ndarray, axis=0) )
             elif stat_type is Stack.TYPE.MAX:
-                stats.append( np.amax(image_data_list, axis=0) )
+                stats.append( np.amax(image_data_ndarray, axis=0) )
             elif stat_type is Stack.TYPE.MEDIAN:
-                stats.append( np.median(image_data_list, axis=0) )
+                stats.append( np.median(image_data_ndarray, axis=0) )
             elif stat_type is Stack.TYPE.MIN:
                 # If you see ripple pattern artifacts, disable lens distortion
                 # correction in the input image
-                stats.append( np.amin(image_data_list, axis=0) )
+                stats.append( np.amin(image_data_ndarray, axis=0) )
             else:
                 raise
 
