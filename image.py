@@ -51,10 +51,10 @@ class Image:
             if image_gray.dtype == np.float64:
                 image_gray_float = image_gray
             elif image_gray.dtype in (np.float16, np.float32):
-                image_gray_float = image_gray.astype(np.float64)
+                image_gray_float = image_gray.astype(np.float64, casting='safe')
             else:
                 image_gray_float: np.ndarray = (
-                    image_gray.astype(np.float64) / np.iinfo(image_gray.dtype).max
+                    image_gray.astype(np.float64, casting='safe') / np.iinfo(image_gray.dtype).max
                 )
             self._image_gray_float_wlred = Image.wavelet_dec_red_rec(image_gray_float)
 
@@ -63,10 +63,10 @@ class Image:
             if image_gray_blur.dtype == np.float64:
                 image_gray_blur_float = image_gray_blur
             elif image_gray_blur.dtype in (np.float16, np.float32):
-                image_gray_blur_float = image_gray_blur.astype(np.float64)
+                image_gray_blur_float = image_gray_blur.astype(np.float64, casting='safe')
             else:
                 image_gray_blur_float: np.ndarray = (
-                    image_gray_blur.astype(np.float64) / np.iinfo(image_gray_blur.dtype).max
+                    image_gray_blur.astype(np.float64, casting='safe') / np.iinfo(image_gray_blur.dtype).max
                 )
             self._image_gray_blur_float_wlred = Image.wavelet_dec_red_rec(image_gray_blur_float)
 
