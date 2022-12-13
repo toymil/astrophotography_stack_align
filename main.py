@@ -37,6 +37,7 @@ def main():
     stack = img.Stack(input_file_list)
     # align them, this may take hours if there is a lot of images
     stack.align()
+    # stack.align(filter_=False)
 
     # # After hours of alignment, it is recommended to save the aligned result,
     # # since the following steps are very memory heavy and the program may quit
@@ -58,7 +59,7 @@ def main():
     # Blur this 'background' to smooth it out, otherwise any brightness fluctuation
     # will have a great impact on the subtracted image if its exposure value is to
     # be greatly boosted.
-    unaligned_median_61 = cv.blur(unaligned_median, (61, 61))
+    unaligned_median_blur = cv.blur(unaligned_median, (61, 61))
 
     # NOTES on time saving:
     # To achieve a good structureless background, you need a 'long time span' sequence of images.
@@ -80,28 +81,22 @@ def main():
     #
     # Play with the value, and pick the one that works.
     # (lower than 10 might be too extream)
-    subtracted_00 = aligned_mean - unaligned_median
-    subtracted_05 = (aligned_mean - (1 - 0.05) * unaligned_median_61).astype(aligned_mean.dtype)
-    subtracted_10 = (aligned_mean - (1 - 0.10) * unaligned_median_61).astype(aligned_mean.dtype)
-    subtracted_15 = (aligned_mean - (1 - 0.15) * unaligned_median_61).astype(aligned_mean.dtype)
-    subtracted_20 = (aligned_mean - (1 - 0.20) * unaligned_median_61).astype(aligned_mean.dtype)
+    subtracted_90 = (aligned_mean - 0.9 * unaligned_median_blur).astype(aligned_mean.dtype)
+    subtracted_80 = (aligned_mean - 0.8 * unaligned_median_blur).astype(aligned_mean.dtype)
+    subtracted_70 = (aligned_mean - 0.7 * unaligned_median_blur).astype(aligned_mean.dtype)
     # Since the data type is unsigned int, when the subtractor is greater than
     # the 'subtractee', the value will flip to maximum.  This part is just to
     # take care of that.
-    subtracted_00[aligned_mean < subtracted_00] = 0
-    subtracted_05[aligned_mean < subtracted_05] = 0
-    subtracted_10[aligned_mean < subtracted_10] = 0
-    subtracted_15[aligned_mean < subtracted_15] = 0
-    subtracted_20[aligned_mean < subtracted_20] = 0
+    subtracted_90[aligned_mean < subtracted_90] = 0
+    subtracted_80[aligned_mean < subtracted_80] = 0
+    subtracted_70[aligned_mean < subtracted_70] = 0
 
     # Write produced images to files.
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_aligned_mean.tiff'), aligned_mean)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_unaligned_median.tiff'), unaligned_median_61)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_subtracted_00.tiff'), subtracted_00)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_subtracted_05.tiff'), subtracted_05)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_subtracted_10.tiff'), subtracted_10)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_subtracted_15.tiff'), subtracted_15)
-    cv.imwrite(os.path.join(WORKING_DIR, 'output_subtracted_20.tiff'), subtracted_20)
+    cv.imwrite(os.path.join(WORKING_DIR, '_aligned_mean.tiff'), aligned_mean)
+    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median.tiff'), unaligned_median_blur)
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_90.tiff'), subtracted_90)
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_80.tiff'), subtracted_80)
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_70.tiff'), subtracted_70)
 
     # NOTES on color management:
     # opencv dose not care about color space, it just read and write pixel values,and the file
