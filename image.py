@@ -624,8 +624,8 @@ class Stack:
         self,
         statistics_types: Union[ Stack.TYPE, tuple[Stack.TYPE, ...] ],
         *,
-        return_same_dtype: bool = True,
         aligned: bool = True,
+        return_same_dtype: bool = True,
     ) -> Union[np.ndarray, tuple[np.ndarray, ...]]:
         if aligned:
             domain = self.input_image_object_list
