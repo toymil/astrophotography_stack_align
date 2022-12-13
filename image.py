@@ -296,11 +296,10 @@ class Image:
         self.structures = tuple(structures)
 
     def transform(self, transformation_matrix: np.ndarray = None) -> None:
-        if transformation_matrix is not None:
-            self.set_transformation_matrix(transformation_matrix)
+        trans_matrix = self.trans_matrix_to_align_with_another_image if transformation_matrix is None else transformation_matrix
         self.image = cv.warpPerspective(
             self.image,
-            self.trans_matrix_to_align_with_another_image,
+            trans_matrix,
             self.image.shape[:2][::-1],
             flags=cv.INTER_LANCZOS4,
         )
