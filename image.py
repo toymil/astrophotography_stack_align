@@ -617,6 +617,7 @@ class Stack:
     class TYPE(enum.Enum):
         MEAN = enum.auto()
         MEDIAN = enum.auto()
+        MEDIAN_OF_MEDIANS = enum.auto()
         MIN = enum.auto()
         MAX = enum.auto()
 
@@ -676,3 +677,80 @@ class Stack:
         if single_input:
             return stats[0]
         return tuple(stats)
+
+    def budget_statistics(
+        self,
+        statistics_type: Stack.TYPE,
+        *,
+        aligned: bool = True,
+        memory_budget: float = 2,  # unit is GiB
+    ) -> np.ndarray:
+        self.reference_image_object.load()
+        img_shape = self.reference_image_object.image.shape
+        img_ori_dtype = self.reference_image_object.image.dtype
+
+        N: int = len(self.image_object_tuple)
+        total_size = (  # single image
+            64  # float 64
+            * img_shape[0] * img_shape[1]  # total pixel
+            * 3  # 3 color channels
+            / 8  # bit to byte
+            / 1024**3  # byte to gigabyte
+        ) * N * 3
+        # times 3 because (from observation) ndarray takes extra space in memory
+        batch_number = math.ceil(total_size / memory_budget)
+        img_per_batch = math.ceil(N / batch_number)
+
+        statistics: np.ndarray = None
+        statistics_: list[np.ndarray] = None
+        match statistics_type:
+            case Stack.TYPE.MEAN:
+                statistics = np.zeros(img_shape, np.float64)
+            case Stack.TYPE.MEDIAN_OF_MEDIANS:
+                statistics_ = list()
+            case Stack.TYPE.MIN:
+                statistics = np.full(
+                    img_shape,
+                    np.iinfo(img_ori_dtype).max,
+                    np.float64,
+                )
+            case Stack.TYPE.MAX:
+                statistics = np.full(
+                    img_shape,
+                    np.iinfo(img_ori_dtype).min,
+                    np.float64,
+                )
+            case _: raise
+
+        i: int = 0
+        while i < N:
+            per_batch_list: list[np.ndarray] = list()
+            for ii in range(min(img_per_batch, N - i)):
+                self.image_object_tuple[i].load()
+                self.image_object_tuple[i].image = self.image_object_tuple[i].image.astype(
+                    np.float64, casting='safe'
+                )
+                if aligned:
+                    self.image_object_tuple[i].transform()
+                per_batch_list.append(self.image_object_tuple[i].image)
+                self.image_object_tuple[i].release()
+                i += 1
+            per_batch_ndarray: np.ndarray = np.array(per_batch_list)
+            match statistics_type:
+                case Stack.TYPE.MEAN:
+                    statistics += per_batch_ndarray.sum(axis=0) / N
+                case Stack.TYPE.MEDIAN_OF_MEDIANS:
+                    statistics_.append(np.median(per_batch_ndarray, axis=0))
+                case Stack.TYPE.MIN:
+                    statistics = np.array(
+                        [statistics, per_batch_ndarray.min(axis=0)]
+                    ).min(axis=0)
+                case Stack.TYPE.MAX:
+                    statistics = np.array(
+                        [statistics, per_batch_ndarray.max(axis=0)]
+                    ).max(axis=0)
+                case _: raise
+        if statistics_type is Stack.TYPE.MEDIAN_OF_MEDIANS:
+            statistics = np.median(np.array(statistics_), axis=0)
+
+        return statistics
