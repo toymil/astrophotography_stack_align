@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import enum
 import math
+import random
 import warnings
 from collections.abc import Sequence
 from typing import TypeVar
@@ -703,11 +704,14 @@ class Stack:
 
         statistics: np.ndarray = None
         statistics_: list[np.ndarray] = None
+        # index pool, allow us to shuffle image order when needed
+        ip: list[int] = list(range(N))
         match statistics_type:
             case Stack.TYPE.MEAN:
                 statistics = np.zeros(img_shape, np.float64)
             case Stack.TYPE.MEDIAN_OF_MEDIANS:
                 statistics_ = list()
+                random.shuffle(ip)
             case Stack.TYPE.MIN:
                 statistics = np.full(
                     img_shape,
@@ -726,14 +730,14 @@ class Stack:
         while i < N:
             per_batch_list: list[np.ndarray] = list()
             for ii in range(min(img_per_batch, N - i)):
-                self.image_object_tuple[i].load()
-                self.image_object_tuple[i].image = self.image_object_tuple[i].image.astype(
+                self.image_object_tuple[ip[i]].load()
+                self.image_object_tuple[ip[i]].image = self.image_object_tuple[ip[i]].image.astype(
                     np.float64, casting='safe'
                 )
                 if aligned:
-                    self.image_object_tuple[i].transform()
-                per_batch_list.append(self.image_object_tuple[i].image)
-                self.image_object_tuple[i].release()
+                    self.image_object_tuple[ip[i]].transform()
+                per_batch_list.append(self.image_object_tuple[ip[i]].image)
+                self.image_object_tuple[ip[i]].release()
                 i += 1
             per_batch_ndarray: np.ndarray = np.array(per_batch_list)
             match statistics_type:
