@@ -616,9 +616,9 @@ class Stack:
     @enum.unique
     class TYPE(enum.Enum):
         MEAN = enum.auto()
-        MAX = enum.auto()
         MEDIAN = enum.auto()
         MIN = enum.auto()
+        MAX = enum.auto()
 
     def statistics(
         self,
