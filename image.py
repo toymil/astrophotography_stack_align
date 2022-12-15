@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import enum
 import math
+import os
 import random
 import warnings
 from collections.abc import Sequence
@@ -538,6 +539,8 @@ class IIO:  # Inter-Image Operation
 
 
 class Stack:
+    ALIGN_MATRIX_FILE_EXTENSION = '.align.npy'
+
     def __init__(self, image_file_path_list: list[str]) -> None:
         ifpl = image_file_path_list.copy()
         ifpl.sort()
@@ -605,18 +608,20 @@ class Stack:
         if show_progress:
             print()
 
-    def write_aligned_back_to_files(self) -> None:
-        # files written with `cv.imwrite()` do not have color profiles
-        # use `exiftool -icc_profile -b -w icc ${image_file}` to extract icc profile
-        # use `exiftool '-ICC_Profile<=${icc_file}' ${image_file}` to embed icc profile
-        for image_object in self.input_image_object_list:
-            image_object.load()
-            image_object.transform()
-            cv.imwrite(image_object.path, image_object.image)
-            image_object.release()
-        self.reference_image_object.load()
-        cv.imwrite(self.reference_image_object.path, self.reference_image_object.image)
-        self.reference_image_object.release()
+    def write_align_matrix_to_files(self) -> None:
+        for e in self.image_object_tuple:
+            np.save(
+                os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
+                e.trans_matrix_to_align_with_another_image,
+                allow_pickle=False,
+            )
+
+    def read_align_matrix_from_files(self) -> None:
+        for e in self.image_object_tuple:
+            e.set_transformation_matrix(np.load(
+                os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
+                allow_pickle=False,
+            ))
 
     @enum.unique
     class TYPE(enum.Enum):

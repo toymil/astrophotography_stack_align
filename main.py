@@ -34,22 +34,23 @@ def main():
     for i in range(len(input_file_list)):
         # prefix filenames with full path
         input_file_list[i] = os.path.join(WORKING_DIR, input_photo_dir, input_file_list[i])
+    # filter out previously saved align matrix files if exist
+    input_file_list = list(
+        e for e in input_file_list if not e.endswith(img.Stack.ALIGN_MATRIX_FILE_EXTENSION)
+    )
     # create stack object from list of files
     stack = img.Stack(input_file_list)
     # align them, this may take hours if there is a lot of images
     stack.align()
     #stack.align(filter_=False)
 
-    # # After hours of alignment, it is recommended to save the aligned result,
-    # # since the following steps are very memory heavy and the program may quit
-    # # due to lack of system memory.
-    # # Basically the memory you need is around the same size of the total input
-    # # image files.  Of course you can split the job into multiple parts to get
-    # # around this.
-    # #
-    # # But write back to original file is a destructive process, that is why
-    # # this command is commented out.
-    # stack.write_aligned_back_to_files()
+    # After potentially hours of alignment, it is recommended to save the
+    # alignment result, since the following steps need a lot of memory and the
+    # program might crash due to lack of memory.
+    # Basically the amount of memory you need is around the total size of
+    # input image files.  Of course you can split the job into multiple parts,
+    # or allocate a ridiculously large swap file to get around this.
+    stack.write_align_matrix_to_files()
 
     # Take the statistic mean over all aligned images, this gives a 'noise free' image.
     aligned_mean = stack.statistics(img.Stack.TYPE.MEAN, return_same_dtype=False)
