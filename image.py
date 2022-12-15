@@ -510,7 +510,7 @@ class IIO:  # Inter-Image Operation
         while vc_max_std < fmij.std(axis=0).max():
             # mean and std for each m_{ij} over all sets
             m, s = fmij.mean(axis=0), fmij.std(axis=0)  # S9A[m_{ij}]
-            fmij = fmij[
+            nfmij = fmij[
                 np.logical_or(  # SNx9A
                     np.logical_and(  # SNx9A
                         # check for each m_{ij} in each set if it falls within m+-s
@@ -524,6 +524,9 @@ class IIO:  # Inter-Image Operation
                 # only keep sets that have all m_{ij} within m+-s
                 ).all(axis=1)  # SNA
             ]
+            if (not filter_) and (nfmij.shape[0] < 3):
+                break
+            fmij = nfmij
         if fmij.shape[0] < vc_min_used_round:
             raise Exception('Can not achieve valid transformation matrix under given criterion.')
 
