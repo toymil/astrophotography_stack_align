@@ -496,6 +496,10 @@ class IIO:  # Inter-Image Operation
             # solve for set of m_{ij} and append the result
             mij.append(np.linalg.solve(A, b))
         mij: np.ndarray = np.array(mij)  # SNx9A[ [m_{ij}] ]; N = sample_round
+        # TODO: the distribution of each m_{ij} seems to have two (or multiple?)
+        # very close peaks, and they are not symmetrical around the center.
+        # Where does it come from??  See the distribution plot:
+        # plt.hist(mij.T[i], bins=200)
 
         # mij might have a lot of outliers, aka large std,
         # we need to filter it before calculate its mean.
@@ -530,9 +534,6 @@ class IIO:  # Inter-Image Operation
         if fmij.shape[0] < vc_min_used_round:
             raise Exception('Can not achieve valid transformation matrix under given criterion.')
 
-        # TODO: the distribution of each m_{ij} seems to have two (or multiple?)
-        # very close peaks, and they are not symmetric around the center.  Where
-        # does it come from??
         return fmij.mean(axis=0).reshape(3, 3)
 
 
