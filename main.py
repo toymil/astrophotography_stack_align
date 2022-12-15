@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 
 import cv2 as cv
+import numpy as np
 
 import image as img
 
@@ -37,7 +38,7 @@ def main():
     stack = img.Stack(input_file_list)
     # align them, this may take hours if there is a lot of images
     stack.align()
-    # stack.align(filter_=False)
+    #stack.align(filter_=False)
 
     # # After hours of alignment, it is recommended to save the aligned result,
     # # since the following steps are very memory heavy and the program may quit
@@ -51,11 +52,17 @@ def main():
     # stack.write_aligned_back_to_files()
 
     # Take the statistic mean over all aligned images, this gives a 'noise free' image.
-    aligned_mean = stack.statistics(img.Stack.TYPE.MEAN)
+    aligned_mean = stack.statistics(img.Stack.TYPE.MEAN, return_same_dtype=False)
+    #aligned_mean = stack.budget_statistics(img.Stack.TYPE.MEAN)
+    #np.save(os.path.join(WORKING_DIR, '_aligned_mean.npy'), aligned_mean, allow_pickle=False)
+    #
     # Take the statistic median over all UNALIGNED images.  If the time span of
     # all images are long enough, this should give the structureless background
     # (e.g. light pollution, vignetting etc.).
-    unaligned_median = stack.statistics(img.Stack.TYPE.MEDIAN, aligned=False)
+    unaligned_median = stack.statistics(img.Stack.TYPE.MEDIAN, aligned=False, return_same_dtype=False)
+    #unaligned_median = stack.budget_statistics(img.Stack.TYPE.MEDIAN_OF_MEDIANS, aligned=False)
+    #np.save(os.path.join(WORKING_DIR, '_unaligned_median.npy'), unaligned_median, allow_pickle=False)
+    #
     # Blur this 'background' to smooth it out, otherwise any brightness fluctuation
     # will have a great impact on the subtracted image if its exposure value is to
     # be greatly boosted.
@@ -77,31 +84,33 @@ def main():
 
     # Subtract the 'background' from the image, bring out originally washed out
     # structures (like Milky Way).  The exposure value of these images are meant
-    # to be boosted, use any program you like (e.g. Lightroom).
+    # to be stretched, use `Image.stretch()` function or any program you like
+    # (e.g. darktable, Lightroom).
     #
     # Play with the value, and pick the one that works.
-    # (lower than 10 might be too extream)
-    subtracted_90 = (aligned_mean - 0.9 * unaligned_median_blur).astype(aligned_mean.dtype)
-    subtracted_80 = (aligned_mean - 0.8 * unaligned_median_blur).astype(aligned_mean.dtype)
-    subtracted_70 = (aligned_mean - 0.7 * unaligned_median_blur).astype(aligned_mean.dtype)
-    # Since the data type is unsigned int, when the subtractor is greater than
-    # the 'subtractee', the value will flip to maximum.  This part is just to
-    # take care of that.
-    subtracted_90[aligned_mean < subtracted_90] = 0
-    subtracted_80[aligned_mean < subtracted_80] = 0
-    subtracted_70[aligned_mean < subtracted_70] = 0
+    # (more than 90 might be too extream)
+    subtracted_70 = aligned_mean - 0.7 * unaligned_median_blur
+    subtracted_80 = aligned_mean - 0.8 * unaligned_median_blur
+    subtracted_90 = aligned_mean - 0.9 * unaligned_median_blur
+    # # Since the data type is unsigned int, when the subtractor is greater than
+    # # the 'subtractee', the value will flip to maximum.  This part is just to
+    # # take care of that.
+    # subtracted_70[aligned_mean < subtracted_70] = 0
+    # subtracted_80[aligned_mean < subtracted_80] = 0
+    # subtracted_90[aligned_mean < subtracted_90] = 0
 
     # Write produced images to files.
-    cv.imwrite(os.path.join(WORKING_DIR, '_aligned_mean.tiff'), aligned_mean)
-    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median.tiff'), unaligned_median_blur)
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_90.tiff'), subtracted_90)
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_80.tiff'), subtracted_80)
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_70.tiff'), subtracted_70)
+    cv.imwrite(os.path.join(WORKING_DIR, '_aligned_mean.tiff'), img.Image.clip(aligned_mean))
+    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median.tiff'), img.Image.clip(unaligned_median))
+    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median_blur.tiff'), img.Image.clip(unaligned_median_blur))
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_70.tiff'), img.Image.stretch(subtracted_70, extra_factor=2))
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_80.tiff'), img.Image.stretch(subtracted_80, extra_factor=2**2))
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_90.tiff'), img.Image.stretch(subtracted_90, extra_factor=2**4))
 
     # NOTES on color management:
-    # opencv dose not care about color space, it just read and write pixel values,and the file
-    # written by `cv.imwrite()` does not have any color profile attached.  To preserve color
-    # profile, you can extract it into a separate file using other tools, then embed it back.
+    # opencv dose not care about color space, it just reads and writes pixel value, and the file
+    # written with `cv.imwrite()` does not have any color profile attached.  To preserve color
+    # profile, you can extract it to a separate file using other tools, then embed it back later.
     #
     # I recommend the [`exiftool`](https://exiftool.org/) command-line tool:
     # extract: `exiftool -icc_profile -b -w icc ${image_file}`
