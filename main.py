@@ -34,10 +34,6 @@ def main():
     for i in range(len(input_file_list)):
         # prefix filenames with full path
         input_file_list[i] = os.path.join(WORKING_DIR, input_photo_dir, input_file_list[i])
-    # filter out previously saved align matrix files if exist
-    input_file_list = list(
-        e for e in input_file_list if not e.endswith(img.Stack.ALIGN_MATRIX_FILE_EXTENSION)
-    )
     # create stack object from list of files
     stack = img.Stack(input_file_list)
     # align them, this may take hours if there is a lot of images

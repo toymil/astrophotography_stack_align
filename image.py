@@ -565,7 +565,9 @@ class IIO:  # Inter-Image Operation
 
 class Stack:
     def __init__(self, image_file_path_list: list[str]) -> None:
-        ifpl = image_file_path_list.copy()
+        ifpl = list(
+            e for e in image_file_path_list if not e.endswith(Image.ALIGN_TRANS_MATRIX_FILE_EXT)
+        )
         ifpl.sort()
         image_object_list: list[Image] = []
         for p in ifpl:
