@@ -44,13 +44,11 @@ def main():
     stack.align()
     #stack.align(filter_=False)
 
-    # After potentially hours of alignment, it is recommended to save the
-    # alignment result, since the following steps need a lot of memory and the
-    # program might crash due to lack of memory.
-    # Basically the amount of memory you need is around the total size of
-    # input image files.  Of course you can split the job into multiple parts,
-    # or allocate a ridiculously large swap file to get around this.
-    stack.write_align_matrix_to_files()
+    # The following steps need a lot of memory and the program might crash if
+    # the system can not allocate as much.
+    # The amount of memory you need is around the total size of input image
+    # files.  Of course you can split the job into multiple parts, or allocate
+    # a ridiculously large swap file to get around this.
 
     # Take the statistic mean over all aligned images, this gives a 'noise free' image.
     aligned_mean = stack.statistics(img.Stack.TYPE.MEAN, return_same_dtype=False)

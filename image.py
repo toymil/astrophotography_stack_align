@@ -19,6 +19,8 @@ T = TypeVar('T')
 
 
 class Image:
+    ALIGN_TRANS_MATRIX_FILE_EXT = '.align.npy'
+
     def __init__(
         self,
         image_file_path: str,
@@ -84,6 +86,28 @@ class Image:
 
     def set_trans_matrix(self, trans_matrix: np.ndarray) -> None:
         self.align_trans_matrix = trans_matrix
+
+    def save_trans_matrix(self) -> bool:
+        if self.align_trans_matrix is None:
+            return False
+        else:
+            np.save(
+                os.path.splitext(self.path)[0] + Image.ALIGN_TRANS_MATRIX_FILE_EXT,
+                self.align_trans_matrix,
+                allow_pickle=False,
+            )
+            return True
+
+    def load_trans_matrix(self) -> bool:
+        path: str = os.path.splitext(self.path)[0] + Image.ALIGN_TRANS_MATRIX_FILE_EXT
+        if os.path.isfile(path):
+            self.set_trans_matrix(np.load(
+                path,
+                allow_pickle=False,
+            ))
+            return True
+        else:
+            return False
 
     def compute(self, filter_: bool) -> None:
         self.detect_stars(filter_by_brightness=filter_)
@@ -540,8 +564,6 @@ class IIO:  # Inter-Image Operation
 
 
 class Stack:
-    ALIGN_MATRIX_FILE_EXTENSION = '.align.npy'
-
     def __init__(self, image_file_path_list: list[str]) -> None:
         ifpl = image_file_path_list.copy()
         ifpl.sort()
@@ -578,7 +600,7 @@ class Stack:
             end='\r',
         )
 
-    def align(self, show_progress: bool = True, filter_: bool = True) -> None:
+    def align(self, *, save_align_matrix_to_file: bool = True, show_progress: bool = True, filter_: bool = True) -> None:
         if show_progress:
             Stack._show_progress(0, len(self.input_image_object_list))
         self.reference_image_object.load(compute_wlred=True)
@@ -588,6 +610,9 @@ class Stack:
         self.reference_image_object.release()
         for i in range( (total := len(self.input_image_object_list)) ):
             input_image_object = self.input_image_object_list[i]
+            if input_image_object.align_trans_matrix is not None:
+                if show_progress: Stack._show_progress(i + 1, total)
+                continue
             input_image_object.set_star_structure_neighbour_range(
                 self.reference_image_object.star_structure_neighbour_range_low,
                 self.reference_image_object.star_structure_neighbour_range_high
@@ -604,25 +629,18 @@ class Stack:
                     filter_=filter_
                 )
             )
-            if show_progress:
-                Stack._show_progress(i + 1, total)
-        if show_progress:
-            print()
+            if save_align_matrix_to_file: input_image_object.save_trans_matrix()
+            if show_progress: Stack._show_progress(i + 1, total)
+        if show_progress: print()
 
-    def write_align_matrix_to_files(self) -> None:
+    def load_align_matrix_from_file(self) -> None:
         for e in self.image_object_tuple:
-            np.save(
-                os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
-                e.align_trans_matrix,
-                allow_pickle=False,
-            )
+            e.load_trans_matrix()
 
-    def read_align_matrix_from_files(self) -> None:
+    def reset_align_matrix_in_memory(self) -> None:
         for e in self.image_object_tuple:
-            e.set_trans_matrix(np.load(
-                os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
-                allow_pickle=False,
-            ))
+            e.align_trans_matrix = None
+        self.reference_image_object.set_trans_matrix(np.identity(3, np.float64))
 
     @enum.unique
     class TYPE(enum.Enum):
