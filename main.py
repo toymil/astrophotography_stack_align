@@ -36,6 +36,8 @@ def main():
         input_file_list[i] = os.path.join(WORKING_DIR, input_photo_dir, input_file_list[i])
     # create stack object from list of files
     stack = img.Stack(input_file_list)
+    # # load previously (auto) saved align progress
+    # stack.load_align_matrix_from_file()
     # align them, this may take hours if there is a lot of images
     stack.align()
     #stack.align(filter_=False)
@@ -98,7 +100,7 @@ def main():
     cv.imwrite(os.path.join(WORKING_DIR, '_aligned_mean.tiff'), img.Image.clip(aligned_mean))
     cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median.tiff'), img.Image.clip(unaligned_median))
     cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median_blur.tiff'), img.Image.clip(unaligned_median_blur))
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_70.tiff'), img.Image.stretch(subtracted_70, extra_factor=2))
+    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_70.tiff'), img.Image.stretch(subtracted_70))
     cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_80.tiff'), img.Image.stretch(subtracted_80, extra_factor=2**2))
     cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_90.tiff'), img.Image.stretch(subtracted_90, extra_factor=2**4))
 
