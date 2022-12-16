@@ -332,7 +332,12 @@ class Image:
         )
 
     @staticmethod
-    def stretch(image: np.ndarray, target_dtype: type = np.uint16, *, extra_factor: float = 1) -> np.ndarray:
+    def stretch(
+        image: np.ndarray,
+        target_dtype: type = np.uint16,
+        *,
+        extra_factor: float = 1,
+    ) -> np.ndarray:
         return (image * (np.iinfo(target_dtype).max / image.max()) * extra_factor).clip(
             np.iinfo(target_dtype).min,
             np.iinfo(target_dtype).max,
@@ -602,7 +607,13 @@ class Stack:
             end='\r',
         )
 
-    def align(self, *, save_align_matrix_to_file: bool = True, show_progress: bool = True, filter_: bool = True) -> None:
+    def align(
+        self,
+        *,
+        save_align_matrix_to_file: bool = True,
+        show_progress: bool = True,
+        filter_: bool = True,
+    ) -> None:
         if show_progress:
             Stack._show_progress(0, len(self.input_image_object_list))
         self.reference_image_object.load(compute_wlred=True)
