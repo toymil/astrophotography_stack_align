@@ -41,7 +41,8 @@ class Image:
             np.ndarray,  # SNx2A[ [angle, ratio] ]; feature array of triangles
         ], ...] = None
 
-        self.trans_matrix_to_align_with_another_image: np.ndarray = None  # S3x3A
+        # transformation matrix to align with another image
+        self.align_trans_matrix: np.ndarray = None  # S3x3A
 
     def load(self, *, compute_wlred: bool = False) -> None:
         self.image = cv.imread(self.path, cv.IMREAD_UNCHANGED)
@@ -81,8 +82,8 @@ class Image:
         self.star_structure_neighbour_range_low = low
         self.star_structure_neighbour_range_high = high
 
-    def set_transformation_matrix(self, transformation_matrix: np.ndarray) -> None:
-        self.trans_matrix_to_align_with_another_image = transformation_matrix
+    def set_trans_matrix(self, trans_matrix: np.ndarray) -> None:
+        self.align_trans_matrix = trans_matrix
 
     def compute(self, filter_: bool) -> None:
         self.detect_stars(filter_by_brightness=filter_)
@@ -297,8 +298,8 @@ class Image:
 
         self.structures = tuple(structures)
 
-    def transform(self, transformation_matrix: np.ndarray = None) -> None:
-        trans_matrix = self.trans_matrix_to_align_with_another_image if transformation_matrix is None else transformation_matrix
+    def transform(self, trans_matrix: np.ndarray = None) -> None:
+        trans_matrix = self.align_trans_matrix if trans_matrix is None else trans_matrix
         self.image = cv.warpPerspective(
             self.image,
             trans_matrix,
@@ -389,7 +390,7 @@ class IIO:  # Inter-Image Operation
         return tuple(star_pairs)
 
     @staticmethod
-    def calculate_transformation_matrix(
+    def calculate_trans_matrix(
         img1_img2_star_pairs: tuple[tuple[np.ndarray, np.ndarray], ...],
         filter_: bool,
         sample_round: int = None,  # how many sample rounds, `None` for auto
@@ -555,7 +556,7 @@ class Stack:
 
     def set_reference_image(self, index: int) -> None:
         self.reference_image_object = self.image_object_tuple[index]
-        self.reference_image_object.set_transformation_matrix(np.identity(3, np.float64))
+        self.reference_image_object.set_trans_matrix(np.identity(3, np.float64))
         input_image_object_list = list(self.image_object_tuple)
         input_image_object_list.pop(index)
         self.input_image_object_list = input_image_object_list
@@ -594,8 +595,8 @@ class Stack:
             input_image_object.load(compute_wlred=True)
             input_image_object.compute(filter_=filter_)
             input_image_object.release()
-            input_image_object.set_transformation_matrix(
-                IIO.calculate_transformation_matrix(
+            input_image_object.set_trans_matrix(
+                IIO.calculate_trans_matrix(
                     IIO.match_star_pairs(
                         self.reference_image_object.structures,
                         input_image_object.structures
@@ -612,13 +613,13 @@ class Stack:
         for e in self.image_object_tuple:
             np.save(
                 os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
-                e.trans_matrix_to_align_with_another_image,
+                e.align_trans_matrix,
                 allow_pickle=False,
             )
 
     def read_align_matrix_from_files(self) -> None:
         for e in self.image_object_tuple:
-            e.set_transformation_matrix(np.load(
+            e.set_trans_matrix(np.load(
                 os.path.splitext(e.path)[0] + Stack.ALIGN_MATRIX_FILE_EXTENSION,
                 allow_pickle=False,
             ))
