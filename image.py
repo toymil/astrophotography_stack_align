@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import enum
 import math
 import os
@@ -645,6 +646,54 @@ class Stack:
             if save_align_matrix_to_file: input_image_object.save_trans_matrix()
             if show_progress: Stack._show_progress(i + 1, total)
         if show_progress: print()
+
+    def concurrent_align(
+        self,
+        *,
+        save_align_matrix_to_file: bool = True,
+        show_progress: bool = True,
+        filter_: bool = True,
+    ) -> None:
+        self.reference_image_object.load(compute_wlred=True)
+        self.reference_image_object.compute(filter_=filter_)
+        self.reference_image_object.release()
+        total = len(self.input_image_object_list)
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(
+                Stack.concurrent_align_helper,
+                (self.reference_image_object,) * total,
+                self.input_image_object_list,
+                (save_align_matrix_to_file,) * total,
+                (filter_,) * total,
+            )
+
+    @staticmethod
+    def concurrent_align_helper(
+        ref: Image,
+        sample: Image,
+        save_align_matrix_to_file: bool,
+        filter_: bool,
+    ) -> None:
+        if sample.align_trans_matrix is not None:
+            return
+        sample.set_star_structure_neighbour_range(
+            ref.star_structure_neighbour_range_low,
+            ref.star_structure_neighbour_range_high,
+        )
+        sample.load(compute_wlred=True)
+        sample.compute(filter_=filter_)
+        sample.release()
+        sample.set_trans_matrix(
+            IIO.calculate_trans_matrix(
+                IIO.match_star_pairs(
+                    ref.structures,
+                    sample.structures,
+                ),
+                filter_=filter_
+            )
+        )
+        if save_align_matrix_to_file:
+            sample.save_trans_matrix()
 
     def load_align_matrix_from_file(self) -> None:
         for e in self.image_object_tuple:
