@@ -568,6 +568,10 @@ class IIO:  # Inter-Image Operation
 
         return fmij.mean(axis=0).reshape(3, 3)
 
+    @staticmethod
+    def subtract_image(img1: np.ndarray, img2: np.ndarray, factor: float = 1) -> np.ndarray:
+        return img1 - factor * img2
+
 
 class Stack:
     def __init__(self, image_file_path_list: list[str]) -> None:

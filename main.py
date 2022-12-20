@@ -45,18 +45,16 @@ def main():
     stack.align()
     #stack.align(filter_=False)
 
-    # Take the statistic mean over all aligned images, this gives a 'noise free' image.
-    aligned_mean = stack.statistics(img.Stack.TYPE.MEAN, memory_budget=4)
-    np.save(os.path.join(WORKING_DIR, '_aligned_mean.npy'), aligned_mean, allow_pickle=False)
     # Take the statistic median over all UNALIGNED images.  If the time span of
     # all images are long enough, this should give the structureless background
-    # (e.g. light pollution, vignetting etc.).
+    # e.g. light pollution. (vignette should be removed BEFOREHAND)
     unaligned_median = stack.statistics(img.Stack.TYPE.MEDIAN_OF_MEDIANS, aligned=False, memory_budget=4)
     np.save(os.path.join(WORKING_DIR, '_unaligned_median.npy'), unaligned_median, allow_pickle=False)
-    # Blur this 'background' to smooth it out, otherwise any brightness fluctuation
-    # will have a great impact on the subtracted image if its exposure value is to
-    # be greatly boosted.
-    unaligned_median_blur = cv.blur(unaligned_median, (61, 61))
+
+    # # Blur this 'background' to smooth it out, otherwise any brightness
+    # # fluctuation will have a great impact on the subtracted image if its
+    # # exposure value is to be greatly boosted.
+    # unaligned_median_blur = cv.blur(unaligned_median, (61, 61))
 
     # NOTES on time saving:
     # To achieve a good structureless background, you need a 'long time span' sequence of images.
@@ -67,35 +65,40 @@ def main():
     # `mean = cv.imread(mean_img_path, cv.IMREAD_UNCHANGED)` )
     #
     # To avoid memory shortage for 'background' calculation with all the images, you can run it on
-    # down scaled images.  For example, export your images from Lightroom with 1/8 of the original
-    # size, obtain `unaligned_median` with it, then up scale it with the following command:
+    # down scaled images.  For example, export your images with 1/8 of the original size, obtain
+    # `unaligned_median` with it, then up scale it with the following command:
     # `unali_medi = cv.resize(unali_medi, dsize=(0, 0), fx=8, fy=8, interpolation=cv.INTER_CUBIC)`
     # (do this **BEFORE** bluring).
 
-    # Subtract the 'background' from the image, bring out originally washed out
-    # structures (like Milky Way).  The exposure value of these images are meant
-    # to be stretched, use `Image.stretch()` function or any program you like
-    # (e.g. darktable, Lightroom).
-    #
-    # Play with the value, and pick the one that works.
-    # (more than 90 might be too extream)
-    subtracted_070 = aligned_mean - 0.7 * unaligned_median_blur
-    subtracted_080 = aligned_mean - 0.8 * unaligned_median_blur
-    subtracted_090 = aligned_mean - 0.9 * unaligned_median_blur
-    # # Since the data type is unsigned int, when the subtractor is greater than
-    # # the 'subtractee', the value will flip to maximum.  This part is just to
-    # # take care of that.
-    # subtracted_070[aligned_mean < subtracted_070] = 0
-    # subtracted_080[aligned_mean < subtracted_080] = 0
-    # subtracted_090[aligned_mean < subtracted_090] = 0
+    # Take the statistic mean over all aligned images, this gives a 'noise free' image.
+    aligned_mean_090 = stack.statistics(
+        img.Stack.TYPE.MEAN,
+        # subtract the 'background' from each source frame, play with the
+        # factor, and pick one that works.
+        preprocess=lambda x: img.IIO.subtract_image(x, unaligned_median, 0.9),
+        memory_budget=4,
+    )
+    np.save(os.path.join(WORKING_DIR, '_aligned_mean_090.npy'), aligned_mean_090, allow_pickle=False)
 
-    # Write produced images to files.
-    cv.imwrite(os.path.join(WORKING_DIR, '_aligned_mean.tiff'), img.Image.clip(aligned_mean))
-    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median.tiff'), img.Image.clip(unaligned_median))
-    cv.imwrite(os.path.join(WORKING_DIR, '_unaligned_median_blur.tiff'), img.Image.clip(unaligned_median_blur))
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_070.tiff'), img.Image.stretch(subtracted_070))
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_080.tiff'), img.Image.stretch(subtracted_080, extra_factor=2**2))
-    cv.imwrite(os.path.join(WORKING_DIR, 'subtracted_090.tiff'), img.Image.stretch(subtracted_090, extra_factor=2**4))
+    # Write produced image to files.
+    cv.imwrite(
+        os.path.join(WORKING_DIR, '_unaligned_median.tiff'),
+        img.Image.clip(
+            unaligned_median,
+            np.uint16,
+        ),
+    )
+    cv.imwrite(
+        os.path.join(WORKING_DIR, '_aligned_mean_090.tiff'),
+        # Stretch exposure.  If you want to do this in another program (e.g.
+        # darktable, RawTherapee, Lightroom etc.), switch to the `clip`
+        # function.
+        img.Image.stretch(
+            aligned_mean_090,
+            np.uint16,
+            extra_factor=2**4,
+        ),
+    )
 
     # NOTES on color management:
     # opencv dose not care about color space, it just reads and writes pixel value, and the file
