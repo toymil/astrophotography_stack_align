@@ -18,13 +18,14 @@ Check out those jupyter notebooks under folder `math/` to see how it works.  All
 ## TO-DOs
 
 - [ ] find test samples in multiple focal length (especially wide angle)
-- [ ] increase bit precision in the pipeline
-  - [ ] do stack mean on subtracted, raised exposure images, to increase bit resolution (aka tone stretching before not after stack)
+- [ ] use actually correct workflow
+  - [ ] do calibration before stacking (because stack align shifts image, so doing it after stacking is not mathematically correct)
 - [ ] various `TODO`s in the code
 - [ ] super resolution
 - [ ] bypass demosaic
 - [ ] run some stages on GPU?
-- [ ] multi thread
+- [x] increase bit precision in the pipeline
+- [x] multi thread
 
 ## Dependencies
 
