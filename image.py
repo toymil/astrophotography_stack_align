@@ -769,7 +769,7 @@ class Stack:
 
         return statistics
 
-    def statistics_deprecated(
+    def deprecated_statistics(
         self,
         statistics_types: Stack.TYPE | tuple[Stack.TYPE, ...],
         *,
