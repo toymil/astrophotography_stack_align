@@ -9,7 +9,7 @@ import math
 import os
 import random
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TypeVar
 
 import cv2 as cv
@@ -689,6 +689,7 @@ class Stack:
         statistics_type: Stack.TYPE,
         *,
         aligned: bool = True,
+        preprocess: Callable[[np.ndarray], np.ndarray] = None,
         memory_budget: float = 2,  # unit is GiB
     ) -> np.ndarray:
         # to obtain the same result as MEDIAN type using MEDIAN_OF_MEDIANS type,
@@ -744,6 +745,10 @@ class Stack:
                 self.image_object_tuple[ip[i]].image = self.image_object_tuple[ip[i]].image.astype(
                     np.float64, casting='safe'
                 )
+                if preprocess is not None:
+                    self.image_object_tuple[ip[i]].image = preprocess(
+                        self.image_object_tuple[ip[i]].image
+                    )
                 if aligned:
                     self.image_object_tuple[ip[i]].transform()
                 per_batch_list.append(self.image_object_tuple[ip[i]].image)
