@@ -684,63 +684,6 @@ class Stack:
         MIN = enum.auto()
         MAX = enum.auto()
 
-    def statistics_deprecated(
-        self,
-        statistics_types: Stack.TYPE | tuple[Stack.TYPE, ...],
-        *,
-        aligned: bool = True,
-        return_same_dtype: bool = True,
-    ) -> np.ndarray | tuple[np.ndarray, ...]:
-        self.reference_image_object.load()
-        input_dtype = self.reference_image_object.image.dtype
-
-        image_data_list: list[np.ndarray] = list()
-        for image_object in self.image_object_tuple:
-            image_object.load()
-            image_object.image = image_object.image.astype(np.float64, casting='safe')
-            if aligned:
-                image_object.transform()
-            image_data_list.append(image_object.image)
-            image_object.release()
-
-        image_data_ndarray: np.ndarray = np.array(image_data_list)
-
-        stats: list[np.ndarray] = []
-        single_input: bool = False
-        if type(statistics_types) is Stack.TYPE:
-            single_input = True
-            statistics_types = (statistics_types, )
-        for stat_type in statistics_types:
-            if stat_type is Stack.TYPE.MEAN:
-                stats.append( np.mean(image_data_ndarray, axis=0) )
-            elif stat_type is Stack.TYPE.MAX:
-                stats.append( np.amax(image_data_ndarray, axis=0) )
-            elif stat_type is Stack.TYPE.MEDIAN:
-                stats.append( np.median(image_data_ndarray, axis=0) )
-            elif stat_type is Stack.TYPE.MIN:
-                # If you see ripple pattern artifacts, disable lens distortion
-                # correction in the input image
-                stats.append( np.amin(image_data_ndarray, axis=0) )
-            else:
-                raise
-
-        if return_same_dtype:
-            if input_dtype == np.float64:
-                pass
-            elif input_dtype in (np.float16, np.float32):
-                for i in range(len(stats)):
-                    stats[i] = stats[i].astype(input_dtype)
-            else:
-                for i in range(len(stats)):
-                    stats[i] = stats[i].clip(
-                        np.iinfo(input_dtype).min,
-                        np.iinfo(input_dtype).max,
-                    ).astype(input_dtype)
-
-        if single_input:
-            return stats[0]
-        return tuple(stats)
-
     def statistics(
         self,
         statistics_type: Stack.TYPE,
@@ -825,3 +768,60 @@ class Stack:
             statistics = np.median(np.array(statistics_), axis=0)
 
         return statistics
+
+    def statistics_deprecated(
+        self,
+        statistics_types: Stack.TYPE | tuple[Stack.TYPE, ...],
+        *,
+        aligned: bool = True,
+        return_same_dtype: bool = True,
+    ) -> np.ndarray | tuple[np.ndarray, ...]:
+        self.reference_image_object.load()
+        input_dtype = self.reference_image_object.image.dtype
+
+        image_data_list: list[np.ndarray] = list()
+        for image_object in self.image_object_tuple:
+            image_object.load()
+            image_object.image = image_object.image.astype(np.float64, casting='safe')
+            if aligned:
+                image_object.transform()
+            image_data_list.append(image_object.image)
+            image_object.release()
+
+        image_data_ndarray: np.ndarray = np.array(image_data_list)
+
+        stats: list[np.ndarray] = []
+        single_input: bool = False
+        if type(statistics_types) is Stack.TYPE:
+            single_input = True
+            statistics_types = (statistics_types, )
+        for stat_type in statistics_types:
+            if stat_type is Stack.TYPE.MEAN:
+                stats.append( np.mean(image_data_ndarray, axis=0) )
+            elif stat_type is Stack.TYPE.MAX:
+                stats.append( np.amax(image_data_ndarray, axis=0) )
+            elif stat_type is Stack.TYPE.MEDIAN:
+                stats.append( np.median(image_data_ndarray, axis=0) )
+            elif stat_type is Stack.TYPE.MIN:
+                # If you see ripple pattern artifacts, disable lens distortion
+                # correction in the input image
+                stats.append( np.amin(image_data_ndarray, axis=0) )
+            else:
+                raise
+
+        if return_same_dtype:
+            if input_dtype == np.float64:
+                pass
+            elif input_dtype in (np.float16, np.float32):
+                for i in range(len(stats)):
+                    stats[i] = stats[i].astype(input_dtype)
+            else:
+                for i in range(len(stats)):
+                    stats[i] = stats[i].clip(
+                        np.iinfo(input_dtype).min,
+                        np.iinfo(input_dtype).max,
+                    ).astype(input_dtype)
+
+        if single_input:
+            return stats[0]
+        return tuple(stats)
