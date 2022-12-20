@@ -684,7 +684,7 @@ class Stack:
         MIN = enum.auto()
         MAX = enum.auto()
 
-    def statistics(
+    def statistics_deprecated(
         self,
         statistics_types: Stack.TYPE | tuple[Stack.TYPE, ...],
         *,
@@ -741,13 +741,18 @@ class Stack:
             return stats[0]
         return tuple(stats)
 
-    def budget_statistics(
+    def statistics(
         self,
         statistics_type: Stack.TYPE,
         *,
         aligned: bool = True,
         memory_budget: float = 2,  # unit is GiB
     ) -> np.ndarray:
+        # to obtain the same result as MEDIAN type using MEDIAN_OF_MEDIANS type,
+        # set the memory_budget to a very large number so that one batch will
+        # cover all the images. (of course you need to have enough memory to
+        # hold all the images if doing this)
+
         self.reference_image_object.load()
         img_shape = self.reference_image_object.image.shape
         img_ori_dtype = self.reference_image_object.image.dtype
