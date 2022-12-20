@@ -614,58 +614,21 @@ class Stack:
         save_align_matrix_to_file: bool = True,
         show_progress: bool = True,
         filter_: bool = True,
-    ) -> None:
-        if show_progress:
-            Stack._show_progress(0, len(self.input_image_object_list))
-        self.reference_image_object.load(compute_wlred=True)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.reference_image_object.compute(filter_=filter_)
-        self.reference_image_object.release()
-        for i in range( (total := len(self.input_image_object_list)) ):
-            input_image_object = self.input_image_object_list[i]
-            if input_image_object.align_trans_matrix is not None:
-                if show_progress: Stack._show_progress(i + 1, total)
-                continue
-            input_image_object.set_star_structure_neighbour_range(
-                self.reference_image_object.star_structure_neighbour_range_low,
-                self.reference_image_object.star_structure_neighbour_range_high
-            )
-            input_image_object.load(compute_wlred=True)
-            input_image_object.compute(filter_=filter_)
-            input_image_object.release()
-            input_image_object.set_trans_matrix(
-                IIO.calculate_trans_matrix(
-                    IIO.match_star_pairs(
-                        self.reference_image_object.structures,
-                        input_image_object.structures
-                    ),
-                    filter_=filter_
-                )
-            )
-            if save_align_matrix_to_file: input_image_object.save_trans_matrix()
-            if show_progress: Stack._show_progress(i + 1, total)
-        if show_progress: print()
-
-    def concurrent_align(
-        self,
-        *,
-        save_align_matrix_to_file: bool = True,
-        show_progress: bool = True,
-        filter_: bool = True,
         max_concurrency: int | None = None,
     ) -> None:
         total = len(self.input_image_object_list)
         if show_progress:
             Stack._show_progress(0, total)
         self.reference_image_object.load(compute_wlred=True)
-        self.reference_image_object.compute(filter_=filter_)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.reference_image_object.compute(filter_=filter_)
         self.reference_image_object.release()
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=max_concurrency,
         ) as executor:
             it = executor.map(
-                Stack.concurrent_align_helper,
+                Stack.align_helper,
                 (self.reference_image_object,) * total,
                 self.input_image_object_list,
                 (save_align_matrix_to_file,) * total,
@@ -677,7 +640,7 @@ class Stack:
         if show_progress: print()
 
     @staticmethod
-    def concurrent_align_helper(
+    def align_helper(
         ref: Image,
         sample: Image,
         save_align_matrix_to_file: bool,
