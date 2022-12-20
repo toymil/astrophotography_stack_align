@@ -654,18 +654,24 @@ class Stack:
         show_progress: bool = True,
         filter_: bool = True,
     ) -> None:
+        total = len(self.input_image_object_list)
+        if show_progress:
+            Stack._show_progress(0, total)
         self.reference_image_object.load(compute_wlred=True)
         self.reference_image_object.compute(filter_=filter_)
         self.reference_image_object.release()
-        total = len(self.input_image_object_list)
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(
+            it = executor.map(
                 Stack.concurrent_align_helper,
                 (self.reference_image_object,) * total,
                 self.input_image_object_list,
                 (save_align_matrix_to_file,) * total,
                 (filter_,) * total,
             )
+            if show_progress:
+                for i, _ in enumerate(it):
+                    Stack._show_progress(i + 1, total)
+        if show_progress: print()
 
     @staticmethod
     def concurrent_align_helper(
