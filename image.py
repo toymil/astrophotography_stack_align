@@ -653,6 +653,7 @@ class Stack:
         save_align_matrix_to_file: bool = True,
         show_progress: bool = True,
         filter_: bool = True,
+        max_concurrency: int | None = None,
     ) -> None:
         total = len(self.input_image_object_list)
         if show_progress:
@@ -660,7 +661,9 @@ class Stack:
         self.reference_image_object.load(compute_wlred=True)
         self.reference_image_object.compute(filter_=filter_)
         self.reference_image_object.release()
-        with concurrent.futures.ProcessPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=max_concurrency,
+        ) as executor:
             it = executor.map(
                 Stack.concurrent_align_helper,
                 (self.reference_image_object,) * total,
