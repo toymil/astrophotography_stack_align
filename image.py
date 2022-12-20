@@ -324,10 +324,10 @@ class Image:
         self.structures = tuple(structures)
 
     def transform(self, trans_matrix: np.ndarray = None) -> None:
-        trans_matrix = self.align_trans_matrix if trans_matrix is None else trans_matrix
+        trans_matrix_ = self.align_trans_matrix if trans_matrix is None else trans_matrix
         self.image = cv.warpPerspective(
             self.image,
-            trans_matrix,
+            trans_matrix_,
             self.image.shape[:2][::-1],
             flags=cv.INTER_LANCZOS4,
         )
@@ -739,7 +739,7 @@ class Stack:
         i: int = 0
         while i < N:
             per_batch_list: list[np.ndarray] = list()
-            for ii in range(min(img_per_batch, N - i)):
+            for _ in range(min(img_per_batch, N - i)):
                 self.image_object_tuple[ip[i]].load()
                 self.image_object_tuple[ip[i]].image = self.image_object_tuple[ip[i]].image.astype(
                     np.float64, casting='safe'
