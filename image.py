@@ -635,11 +635,14 @@ class Stack:
                 Stack.align_helper,
                 (self.reference_image_object,) * total,
                 self.input_image_object_list,
-                (save_align_matrix_to_file,) * total,
                 (filter_,) * total,
             )
-            if show_progress:
-                for i, _ in enumerate(it):
+            for i, result in enumerate(it):
+                if result[0] is True:
+                    self.input_image_object_list[i].set_trans_matrix(result[1])
+                    if save_align_matrix_to_file:
+                        self.input_image_object_list[i].save_trans_matrix()
+                if show_progress:
                     Stack._show_progress(i + 1, total)
         if show_progress: print()
 
@@ -647,11 +650,10 @@ class Stack:
     def align_helper(
         ref: Image,
         sample: Image,
-        save_align_matrix_to_file: bool,
         filter_: bool,
-    ) -> None:
+    ) -> tuple[bool, np.ndarray]:
         if sample.align_trans_matrix is not None:
-            return
+            return (False, sample.align_trans_matrix)
         sample.set_star_structure_neighbour_range(
             ref.star_structure_neighbour_range_low,
             ref.star_structure_neighbour_range_high,
@@ -659,17 +661,16 @@ class Stack:
         sample.load(compute_wlred=True)
         sample.compute(filter_=filter_)
         sample.release()
-        sample.set_trans_matrix(
+        return (
+            True,
             IIO.calculate_trans_matrix(
                 IIO.match_star_pairs(
                     ref.structures,
                     sample.structures,
                 ),
                 filter_=filter_
-            )
+            ),
         )
-        if save_align_matrix_to_file:
-            sample.save_trans_matrix()
 
     def load_align_matrix_from_file(self) -> None:
         for e in self.image_object_tuple:
