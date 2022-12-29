@@ -10,30 +10,26 @@ import numpy as np
 
 import image as img
 
-# the directory this script is running form
-WORKING_DIR: str = os.path.normpath(
-    os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        './',
-    )
-)
 
 ################################################################################
 #                this file is just an illustration, it is meant                #
 #              to be READ, then MODIFIED to suit your application              #
 ################################################################################
 
-
-# directory of input images
-input_photo_dir: str = 'input_tiff/size_full'
+# directories
+working_dir = os.getcwd()
+input_dir: str = r""
+output_dir: str = r""
+def p(path: str, working_dir: str = working_dir) -> str:
+    return os.path.normpath(os.path.join(working_dir, path))
 
 
 def main():
     # gather input filenames
-    input_file_list = os.listdir(os.path.join(WORKING_DIR, input_photo_dir))
+    input_file_list = os.listdir(p(input_dir))
     for i in range(len(input_file_list)):
         # prefix filenames with full path
-        input_file_list[i] = os.path.join(WORKING_DIR, input_photo_dir, input_file_list[i])
+        input_file_list[i] = os.path.join(p(input_dir), input_file_list[i])
 
     # create stack object from list of files
     stack = img.Stack(input_file_list)
@@ -49,7 +45,7 @@ def main():
     # all images are long enough, this should give the structureless background
     # e.g. light pollution. (vignette should be removed BEFOREHAND)
     unaligned_median = stack.statistics(img.Stack.TYPE.MEDIAN_OF_MEDIANS, aligned=False, memory_budget=4)
-    np.save(os.path.join(WORKING_DIR, '_unaligned_median.npy'), unaligned_median, allow_pickle=False)
+    np.save(os.path.join(p(output_dir), '_unaligned_median.npy'), unaligned_median, allow_pickle=False)
 
     # # Blur this 'background' to smooth it out, otherwise any brightness
     # # fluctuation will have a great impact on the subtracted image if its
@@ -78,18 +74,18 @@ def main():
         preprocess=lambda x: img.IIO.subtract_image(x, unaligned_median, 0.9),
         memory_budget=4,
     )
-    np.save(os.path.join(WORKING_DIR, '_aligned_mean_090.npy'), aligned_mean_090, allow_pickle=False)
+    np.save(os.path.join(p(output_dir), '_aligned_mean_090.npy'), aligned_mean_090, allow_pickle=False)
 
     # Write produced image to files.
     cv.imwrite(
-        os.path.join(WORKING_DIR, '_unaligned_median.tiff'),
+        os.path.join(p(output_dir), '_unaligned_median.tiff'),
         img.Image.clip(
             unaligned_median,
             np.uint16,
         ),
     )
     cv.imwrite(
-        os.path.join(WORKING_DIR, '_aligned_mean_090.tiff'),
+        os.path.join(p(output_dir), '_aligned_mean_090.tiff'),
         # Stretch exposure.  If you want to do this in another program (e.g.
         # darktable, RawTherapee, Lightroom etc.), switch to the `clip`
         # function.
